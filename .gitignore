@@ -1,5 +1,32 @@
+# Local environment and secrets
 .env
+.env.*
+!.env.example
+
+# Python virtual environments
+.venv/
+venv/
+
+# Python-generated files
 __pycache__/
+*.py[cod]
 .pytest_cache/
-*.pyc
-backups/
+
+# Test and coverage output
+.coverage
+htmlcov/
+
+# Backup data
+backups/*
+!backups/.gitkeep
+
+# Local logs
+*.log
+
+# Editor settings
+.vscode/
+.idea/
+
+# Operating-system files
+.DS_Store
+Thumbs.db
