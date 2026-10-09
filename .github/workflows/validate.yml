@@ -8,6 +8,10 @@ permissions:
 jobs:
   test-build-smoke:
     runs-on: ubuntu-latest
+    env:
+      # CI-only throwaway value. .env is gitignored, so Compose needs this
+      # variable from the environment on the runner.
+      POSTGRES_PASSWORD: ci-only
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -16,16 +20,31 @@ jobs:
           cache: pip
       - run: pip install -r requirements-dev.txt
       - run: pytest -q
-      - run: POSTGRES_PASSWORD=ci-only docker compose config -q
+      - run: docker compose config -q
       - run: docker build -t inventory-api:ci .
-      - name: Runtime smoke test
+
+      - name: Runtime smoke test (full Compose stack)
         run: |
-          docker run -d --name api -p 8000:8000 \
-            -e DATABASE_URL=postgresql://unused:unused@127.0.0.1:5432/unused \
-            inventory-api:ci
-          for i in {1..20}; do
-            if curl -fsS http://localhost:8000/health; then exit 0; fi
+          docker compose up -d --build
+          for i in {1..30}; do
+            if curl -fsS http://localhost:8000/health; then
+              echo
+              echo "Health check passed on attempt $i"
+              # Prove the full path: API -> Docker DNS -> PostgreSQL -> response
+              curl -fsS http://localhost:8000/api/systems
+              exit 0
+            fi
             sleep 2
           done
-          docker logs api
+          echo "Health check did not pass within 60 seconds"
           exit 1
+
+      - name: Show diagnostics on failure
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs --no-color --timestamps
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
