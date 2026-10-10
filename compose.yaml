@@ -29,6 +29,7 @@ services:
     networks: [backend]
     restart: unless-stopped
     read_only: true
+    tmpfs: [/tmp]
 networks:
   backend: {}
 volumes:
